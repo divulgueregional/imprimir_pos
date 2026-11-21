@@ -40,6 +40,8 @@ class SettingsService extends ChangeNotifier {
       launchAtStartup.setup(
         appName: 'DRSystema Print',
         appPath: Platform.resolvedExecutable,
+        // Ao iniciar com o Windows, abre direto na bandeja (sem janela).
+        args: const ['--minimized'],
       );
 
       if (_autostart) {

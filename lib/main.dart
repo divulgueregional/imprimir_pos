@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'services/local_server.dart';
@@ -7,18 +8,24 @@ import 'services/windows_raw_printer.dart';
 import 'ui/home_page.dart';
 import 'ui/theme.dart';
 
-void main() async {
+void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Inicializar configurações persistidas
   final settingsService = SettingsService();
   await settingsService.init();
 
-  // 2. Inicializar o servidor HTTP / WebSocket local (127.0.0.1:8182)
+  // 2. Se já houver outra instância respondendo na porta, encerra
+  //    silenciosamente (a janela continua na bandeja da instância ativa)
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    if (await _isAlreadyRunning(settingsService.port)) exit(0);
+  }
+
+  // 3. Inicializar o servidor HTTP / WebSocket local (127.0.0.1:8182)
   final localServer = LocalServer(settingsService: settingsService);
   await localServer.start();
 
-  // 3. Inicializar a bandeja do sistema (System Tray) e gerenciador de janela
+  // 4. Inicializar a bandeja do sistema (System Tray) e gerenciador de janela
   TrayService? trayService;
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     trayService = TrayService(
@@ -31,13 +38,33 @@ void main() async {
         }
       },
     );
-    await trayService.init();
+    // '--minimized' vem do autostart do Windows: abre direto na bandeja
+    await trayService.init(startMinimized: args.contains('--minimized'));
   }
 
   runApp(DRSystemaPrintApp(
     server: localServer,
     settings: settingsService,
   ));
+}
+
+/// Verifica se já existe outra instância do DRSystema Print respondendo
+/// no endpoint /status (evita abrir o app duplicado).
+Future<bool> _isAlreadyRunning(int port) async {
+  try {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 1);
+    final request =
+        await client.getUrl(Uri.parse('http://127.0.0.1:$port/status'));
+    final response =
+        await request.close().timeout(const Duration(seconds: 1));
+    final body = await utf8.decoder.bind(response).join();
+    client.close(force: true);
+    final data = jsonDecode(body);
+    return data is Map && data['app'] == 'DRSystema Print';
+  } catch (_) {
+    return false;
+  }
 }
 
 class DRSystemaPrintApp extends StatelessWidget {

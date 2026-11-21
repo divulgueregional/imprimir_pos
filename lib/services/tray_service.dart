@@ -15,11 +15,15 @@ class TrayService with TrayListener, WindowListener {
     this.onTestPrint,
   });
 
-  Future<void> init() async {
+  Future<void> init({bool startMinimized = false}) async {
     if (!Platform.isWindows && !Platform.isMacOS && !Platform.isLinux) return;
 
     // 1. Inicializar window_manager
     await windowManager.ensureInitialized();
+
+    // Intercepta o botao [X]: em vez de encerrar o app, dispara
+    // onWindowClose, que esconde a janela para a bandeja.
+    await windowManager.setPreventClose(true);
 
     const windowOptions = WindowOptions(
       size: Size(820, 680),
@@ -31,8 +35,12 @@ class TrayService with TrayListener, WindowListener {
     );
 
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
+      if (startMinimized) {
+        await windowManager.hide();
+      } else {
+        await windowManager.show();
+        await windowManager.focus();
+      }
     });
 
     windowManager.addListener(this);
@@ -42,7 +50,7 @@ class TrayService with TrayListener, WindowListener {
       trayManager.addListener(this);
 
       final iconPath = Platform.isWindows
-          ? 'windows/runner/resources/app_icon.ico'
+          ? 'assets/icons/app_icon.ico'
           : 'assets/icons/app_icon.png';
 
       await trayManager.setIcon(iconPath);
