@@ -1,0 +1,39 @@
+name: Compilar DRSystema Print (Windows)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Clonar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Executar testes unitários
+        run: flutter test
+
+      - name: Compilar executável para Windows (Release)
+        run: flutter build windows --release
+
+      - name: Compactar build em ZIP
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath drsystema_print_windows.zip
+
+      - name: Salvar artefato para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: drsystema-print-windows
+          path: drsystema_print_windows.zip

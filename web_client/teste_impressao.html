@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste DRSystema Print (Standalone)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1E3A8A;
+            --primary-light: #2563EB;
+            --teal: #0D9488;
+            --success: #16A34A;
+            --error: #DC2626;
+            --dark: #0F172A;
+            --gray: #64748B;
+            --border: #E2E8F0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: #F1F5F9; color: var(--dark); padding: 24px; }
+        .container { max-width: 860px; margin: 0 auto; }
+        .header { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
+        .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+        .status-online { background: #DCFCE7; color: var(--success); }
+        .status-offline { background: #FEE2E2; color: var(--error); }
+        .card { background: white; border-radius: 12px; padding: 20px 24px; border: 1px solid var(--border); margin-bottom: 16px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-teal { background: var(--teal); color: white; }
+        .btn-outline { background: white; color: var(--dark); border: 1px solid var(--border); }
+        .console-box { background: #0F172A; color: #38BDF8; font-family: monospace; font-size: 12px; padding: 14px; border-radius: 8px; height: 160px; overflow-y: auto; white-space: pre-wrap; margin-top: 10px; }
+        .input-text { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; margin-top: 4px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1 style="font-size: 20px; color: var(--primary);">🖨️ DRSystema Print - Teste Standalone</h1>
+            <p style="font-size: 12px; color: var(--gray);">Comunicação direta com o aplicativo desktop em http://127.0.0.1:8182</p>
+        </div>
+        <div id="statusBadge" class="status-badge status-offline">
+            <span id="statusText">Verificando serviço...</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size: 15px; margin-bottom: 8px;">1. Selecionar Impressora Instalada no Windows</h2>
+        <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+            <select id="selectPrinters" style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px;">
+                <option value="">Carregando impressoras...</option>
+            </select>
+            <button class="btn btn-outline" onclick="carregarImpressoras()">🔄 Atualizar</button>
+            <button class="btn btn-primary" onclick="salvarImpressora()">Salvar</button>
+        </div>
+        <p style="font-size: 12px; color: var(--gray);">Impressora ativa: <strong id="impSalva">-</strong></p>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size: 15px; margin-bottom: 8px;">2. Teste de Impressão Simples (Elgin I8)</h2>
+        <p style="font-size: 12px; color: var(--gray); margin-bottom: 12px;">Envia o texto de teste solicitado diretamente em modo RAW com comando de corte.</p>
+        <button class="btn btn-teal" onclick="imprimirTextoSimples()">📄 Imprimir Texto de Teste</button>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size: 15px; margin-bottom: 8px;">3. Teste de Impressão de Nota Real (PHP)</h2>
+        <label style="font-size: 12px; font-weight: 600; color: var(--gray);">URL do backend imprimir.php (com ID da fatura):</label>
+        <input type="text" id="urlPhp" class="input-text" value="http://localhost/themes/drsystema/biblioteca/print/imprimir.php?id=1">
+        <button class="btn btn-primary" onclick="imprimirNotaPhp()">⚡ Buscar no PHP e Imprimir</button>
+    </div>
+
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="font-size: 15px;">Log do Console</h2>
+            <button onclick="document.getElementById('consoleLog').innerHTML = ''" style="background: none; border: none; color: var(--gray); font-size: 11px; cursor: pointer;">Limpar</button>
+        </div>
+        <div id="consoleLog" class="console-box"></div>
+    </div>
+</div>
+
+<script>
+const BASE_URL = 'http://127.0.0.1:8182';
+
+function log(msg, color = '#38BDF8') {
+    const box = document.getElementById('consoleLog');
+    const div = document.createElement('div');
+    div.style.color = color;
+    div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+async function checarStatus() {
+    try {
+        const resp = await fetch(BASE_URL + '/status');
+        if (resp.ok) {
+            const data = await resp.json();
+            document.getElementById('statusBadge').className = 'status-badge status-online';
+            document.getElementById('statusText').innerText = `● Conectado (:8182)`;
+            log(`DRSystema Print Conectado! Versão: ${data.versao}`, '#4ADE80');
+            carregarImpressoras();
+            return;
+        }
+    } catch (_) {}
+    document.getElementById('statusBadge').className = 'status-badge status-offline';
+    document.getElementById('statusText').innerText = '🔴 Desconectado';
+    log('DRSystema Print não encontrado. Abra o executável no Windows.', '#F87171');
+}
+
+async function carregarImpressoras() {
+    try {
+        const resp = await fetch(BASE_URL + '/printers');
+        const data = await resp.json();
+        const select = document.getElementById('selectPrinters');
+        select.innerHTML = '';
+        const salva = localStorage.getItem('imp_qz_selecionada');
+
+        (data.impressoras || []).forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.textContent = p;
+            if (p === salva || (!salva && p === data.padrao)) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        atualizarImpSalva();
+        log(`Impressoras do Windows carregadas (${data.impressoras.length} encontradas).`);
+    } catch (e) {
+        log('Erro ao buscar impressoras: ' + e.message, '#F87171');
+    }
+}
+
+function salvarImpressora() {
+    const sel = document.getElementById('selectPrinters').value;
+    if (sel) {
+        localStorage.setItem('imp_qz_selecionada', sel);
+        atualizarImpSalva();
+        log(`Impressora salva no navegador: "${sel}"`, '#4ADE80');
+    }
+}
+
+function atualizarImpSalva() {
+    document.getElementById('impSalva').innerText = localStorage.getItem('imp_qz_selecionada') || 'Nenhuma';
+}
+
+async function imprimirTextoSimples() {
+    const printer = localStorage.getItem('imp_qz_selecionada');
+    if (!printer) return alert('Selecione uma impressora!');
+
+    const escpos = 
+        '\x1B\x40' +
+        '\x1B\x61\x01' +
+        'DRSystema Print\n' +
+        '------------------------\n' +
+        'Teste de impressao\n' +
+        'Impressora: ' + printer + '\n' +
+        '------------------------\n\n\n\n' +
+        '\x1D\x56\x42\x00';
+
+    const base64 = btoa(unescape(encodeURIComponent(escpos)));
+
+    try {
+        log(`Enviando teste de texto simples para ${printer}...`);
+        const resp = await fetch(BASE_URL + '/print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ printer, data: base64, type: 'raw', docName: 'Teste Simples' })
+        });
+        const res = await resp.json();
+        if (res.sucesso) log(`✅ Impresso com sucesso! (${res.bytes} bytes)`, '#4ADE80');
+        else log(`❌ Erro no spooler: ${res.erro}`, '#F87171');
+    } catch (e) {
+        log('Erro: ' + e.message, '#F87171');
+    }
+}
+
+async function imprimirNotaPhp() {
+    const printer = localStorage.getItem('imp_qz_selecionada');
+    if (!printer) return alert('Selecione uma impressora!');
+
+    const url = document.getElementById('urlPhp').value;
+    log(`Buscando base64 da nota em: ${url}...`);
+
+    try {
+        const respPhp = await fetch(url);
+        const base64 = await respPhp.text();
+
+        if (!base64 || base64.trim().length === 0) {
+            log('⚠️ Retorno do PHP vazio!', '#FBBF24');
+            return;
+        }
+
+        log(`Base64 recebido (${base64.length} caracteres). Despachando para a ${printer}...`);
+
+        const resp = await fetch(BASE_URL + '/print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ printer, data: base64.trim(), type: 'raw', docName: 'NFC-e PHP' })
+        });
+        const res = await resp.json();
+        if (res.sucesso) log(`🎉 Nota impressa com sucesso! (${res.bytes} bytes)`, '#4ADE80');
+        else log(`❌ Erro de impressão: ${res.erro}`, '#F87171');
+    } catch (e) {
+        log('Erro ao imprimir nota: ' + e.message, '#F87171');
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    atualizarImpSalva();
+    checarStatus();
+});
+</script>
+</body>
+</html>
