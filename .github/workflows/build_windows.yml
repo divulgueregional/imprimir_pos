@@ -19,8 +19,10 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Habilitar Desktop Windows
-        run: flutter config --enable-windows-desktop
+      - name: Diagnóstico do Ambiente
+        run: |
+          flutter config --enable-windows-desktop
+          flutter doctor -v
 
       - name: Instalar dependências
         run: flutter pub get
@@ -29,7 +31,7 @@ jobs:
         run: flutter test
 
       - name: Compilar executável para Windows (Release)
-        run: flutter build windows --release
+        run: flutter build windows --release -v
 
       - name: Compactar build em ZIP
         run: |
