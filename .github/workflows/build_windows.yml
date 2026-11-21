@@ -27,6 +27,19 @@ jobs:
       - name: Instalar dependências
         run: flutter pub get
 
+      # O plugin jni (transitivo via shared_preferences_android) tem um bug no
+      # src/CMakeLists.txt: usa ${TARGET_NAME} indefinido no bloco WIN32.
+      # No runner do GitHub ha JDK pre-instalado, entao find_package(JNI) tem
+      # sucesso e o bloco quebrado e executado, falhando o cmake.
+      - name: Corrigir CMake do plugin jni (bug upstream)
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem "$env:LOCALAPPDATA\Pub\Cache\hosted\pub.dev\jni-*\src\CMakeLists.txt" -ErrorAction SilentlyContinue
+          foreach ($f in $files) {
+            (Get-Content $f.FullName -Raw) -replace '\$\{TARGET_NAME\}', 'jni' | Set-Content $f.FullName -NoNewline
+            Write-Host "Patched $($f.FullName)"
+          }
+
       - name: Executar testes unitários
         run: flutter test
 
