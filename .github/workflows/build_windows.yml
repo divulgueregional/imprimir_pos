@@ -58,3 +58,21 @@ jobs:
         with:
           name: drsystema-print-windows
           path: drsystema_print_windows.zip
+
+      # Gera DRSystemaPrintSetup.exe com o Inno Setup (pre-instalado no runner;
+      # fallback via Chocolatey se a imagem mudar).
+      - name: Gerar instalador (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+          & $iscc installer\drsystema_print_installer.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Salvar instalador para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: drsystema-print-setup
+          path: installer_output\DRSystemaPrintSetup.exe
