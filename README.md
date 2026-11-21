@@ -1,21 +1,24 @@
 # 🖨️ DRSystema Print
 
-Aplicativo Desktop em **Flutter** para Windows desenvolvido como substituto nativo, silencioso e de alto desempenho para o **QZ Tray** no **DRSystema**.
+Aplicativo Desktop em **Flutter** para Windows que funciona como uma **ponte de impressão local** do **DRSystema**.
 
-Permite que o sistema web (PHP + JavaScript no navegador) envie impressões térmicas de cupons fiscais (**NFC-e modelo 65**) e **NF-e (modelo 55)** diretamente para impressoras térmicas 80mm instaladas no Windows (ex: **Elgin I8**, Elgin I9, Epson TM-T20, Bematech MP-4200, Daruma), sem abrir a janela de impressão do navegador e sem depender de Java.
+Ele roda em segundo plano na bandeja do sistema e expõe um serviço HTTP/WebSocket em `127.0.0.1:8182`, permitindo que o sistema web (PHP + JavaScript no navegador) envie impressões térmicas de cupons fiscais (**NFC-e modelo 65**) e **NF-e (modelo 55)** diretamente para impressoras térmicas 80mm instaladas no Windows (ex: **Elgin I8**, Elgin I9, Epson TM-T20, Bematech MP-4200, Daruma) — sem abrir a janela de impressão do navegador.
+
+> Foi projetado como substituto nativo para pontes de impressão baseadas em Java, ocupando a mesma porta e oferecendo integração compatível com o fluxo existente do PDV.
 
 ---
 
-## 🚀 Vantagens em relação ao QZ Tray
+## 🚀 Vantagens em usar o DRSystema Print
 
-| Recurso | QZ Tray Legado | DRSystema Print (Flutter) |
-| :--- | :--- | :--- |
-| **Tecnologia** | Java JRE (pesado, ~200MB de RAM) | Nativo Windows C++ / Dart (~35MB de RAM) |
-| **Instalação do Java** | Obrigatório ter Java instalado | Executável autônomo, sem pré-requisitos |
-| **Certificados Digitais** | Exige `sign_message.php`, `chave.pem`, `certificado.txt` | **Zero burocracia:** impressão silenciosa e direta |
-| **Custo de Licenciamento** | Popups chatos ou anuidade em dólar | **100% Gratuito e de sua propriedade** |
-| **Identidade Visual** | Ícones e nome do QZ Tray | **100% DRSystema**, cores, ícone e bandeja |
-| **Velocidade** | ~300ms a 800ms de handshake | **< 50ms (Comunicação Win32 Spooler direta)** |
+| Recurso | DRSystema Print |
+| :--- | :--- |
+| **Tecnologia** | Nativo Windows C++ / Dart (~35MB de RAM), sem Java |
+| **Instalação** | Executável autônomo, sem pré-requisitos |
+| **Burocracia** | **Zero:** impressão silenciosa e direta, sem certificados ou assinatura de mensagens |
+| **Custo** | **100% gratuito e de sua propriedade** |
+| **Identidade Visual** | **100% DRSystema** — cores, ícone e bandeja |
+| **Velocidade** | **< 50ms** — comunicação direta com o Win32 Spooler |
+| **Segundo plano** | Inicia com o Windows já na bandeja; fechar a janela não interrompe o serviço |
 
 ---
 
@@ -30,6 +33,7 @@ imprimir_pos/
 │   │   └── print_request.dart         # Parser de payload (Base64 -> Bytes ESC/POS)
 │   ├── services/
 │   │   ├── windows_raw_printer.dart   # Comunicação Win32 FFI com winspool.drv (Modo RAW)
+│   │   ├── windows_window.dart        # Controle nativo da janela (FindWindow/ShowWindow/SetProp)
 │   │   ├── local_server.dart          # Servidor HTTP/WebSocket (127.0.0.1:8182) com CORS/PNA
 │   │   ├── tray_service.dart          # Gerenciamento da Bandeja do Sistema (System Tray)
 │   │   └── settings_service.dart      # Persistência da impressora padrão e preferências
@@ -37,7 +41,7 @@ imprimir_pos/
 │       ├── home_page.dart             # Painel com dropdown de impressoras e botão de teste
 │       └── theme.dart                 # Identidade visual DRSystema (Material 3)
 ├── web_client/
-│   └── drsystema_print_client.js      # Biblioteca JS drop-in para substituir print.js no PHP
+│   └── drsystema_print_client.js      # Biblioteca JS drop-in para integração no PHP
 ├── installer/
 │   └── drsystema_print_installer.iss  # Script Inno Setup para gerar DRSystemaPrintSetup.exe
 └── windows/                           # Projeto C++ nativo do Windows Runner
@@ -102,7 +106,7 @@ Recebe o conteúdo da nota para impressão imediata.
 }
 ```
 
-*Nota:* O endpoint também aceita diretamente o formato legado em array do QZ Tray:
+*Nota:* O endpoint também aceita diretamente o formato legado em array de objetos:
 ```json
 [
   {
@@ -135,11 +139,15 @@ Para gerar o instalador `DRSystemaPrintSetup.exe`:
 2. Clique em **Build** (F9).
 3. O instalador final estará pronto na pasta `installer_output\DRSystemaPrintSetup.exe`.
 
+Também é possível compilar direto no GitHub: todo push para `main` dispara o workflow
+**"Compilar DRSystema Print (Windows)"** e gera o artifact `drsystema-print-windows`
+na página do run, em *Actions*.
+
 ---
 
 ## 🧩 Integração com o DRSystema (Web)
 
-Basta incluir no seu tema PHP o arquivo [drsystema_print_client.js](file:///Users/roseno/Dev/app/extras/imprimir_pos/web_client/drsystema_print_client.js):
+Basta incluir no seu tema PHP o arquivo [drsystema_print_client.js](web_client/drsystema_print_client.js):
 
 ```html
 <script src="<?= INCLUDE_PATH ?>/biblioteca/print/drsystema_print_client.js"></script>
