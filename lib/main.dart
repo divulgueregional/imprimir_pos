@@ -38,8 +38,9 @@ void main(List<String> args) async {
         }
       },
     );
-    // '--minimized' vem do autostart do Windows: abre direto na bandeja
-    await trayService.init(startMinimized: args.contains('--minimized'));
+    // O app e um serviço de bandeja (estilo QZ Tray): sempre inicia
+    // oculto; a janela só abre pelo clique no ícone ou pelo menu "Abrir".
+    await trayService.init(startMinimized: true);
   }
 
   runApp(DRSystemaPrintApp(

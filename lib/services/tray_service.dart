@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:tray_manager/legacy.dart';
 import 'package:window_manager/legacy.dart';
 import 'settings_service.dart';
+import 'windows_window.dart';
 
 class TrayService with TrayListener, WindowListener {
   final SettingsService settingsService;
@@ -44,6 +45,14 @@ class TrayService with TrayListener, WindowListener {
     });
 
     windowManager.addListener(this);
+
+    // No Windows o runner C++ decide ocultar/encerrar no WM_CLOSE lendo a
+    // prop DRSYS_MINIMIZE_TO_TRAY — mantemos ela sincronizada com o setting.
+    if (Platform.isWindows) {
+      settingsService.addListener(_syncCloseBehavior);
+      _syncCloseBehavior();
+      if (startMinimized) WindowsWindow.hideMainWindow();
+    }
 
     // 2. Inicializar tray_manager
     try {
@@ -87,6 +96,14 @@ class TrayService with TrayListener, WindowListener {
 
   @override
   void onWindowClose() async {
+    if (Platform.isWindows) {
+      if (settingsService.minimizeToTray) {
+        WindowsWindow.hideMainWindow();
+      } else {
+        exit(0);
+      }
+      return;
+    }
     if (settingsService.minimizeToTray) {
       await windowManager.hide();
     } else {
@@ -119,7 +136,15 @@ class TrayService with TrayListener, WindowListener {
     }
   }
 
+  void _syncCloseBehavior() {
+    WindowsWindow.setMinimizeToTray(settingsService.minimizeToTray);
+  }
+
   Future<void> showWindow() async {
+    if (Platform.isWindows) {
+      WindowsWindow.showMainWindow();
+      return;
+    }
     final isVisible = await windowManager.isVisible();
     if (!isVisible) {
       await windowManager.show();
@@ -128,6 +153,7 @@ class TrayService with TrayListener, WindowListener {
   }
 
   void dispose() {
+    settingsService.removeListener(_syncCloseBehavior);
     windowManager.removeListener(this);
     trayManager.removeListener(this);
   }

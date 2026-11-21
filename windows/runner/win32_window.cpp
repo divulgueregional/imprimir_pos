@@ -179,6 +179,17 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_CLOSE:
+      // Se o Dart gravou a preferencia "minimizar para a bandeja" na janela,
+      // o botao [X] apenas oculta (engine e servidor seguem vivos).
+      if (::GetPropW(hwnd, L"DRSYS_MINIMIZE_TO_TRAY")) {
+        ::ShowWindow(hwnd, SW_HIDE);
+        return 0;
+      }
+      // Preferencia desligada: encerra de verdade (WM_DESTROY vai dar quit).
+      quit_on_close_ = true;
+      break;
+
     case WM_DESTROY:
       window_handle_ = nullptr;
       Destroy();

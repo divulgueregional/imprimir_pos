@@ -341,7 +341,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildSettingsCard() {
-    return Card(
+    return ListenableBuilder(
+      listenable: widget.settings,
+      builder: (context, _) {
+        return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -417,6 +420,8 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 
