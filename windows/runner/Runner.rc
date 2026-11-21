@@ -90,10 +90,10 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "DRSystema" "\0"
-            VALUE "FileDescription", "DRSystema Print - Servidor de Impressao Termica" "\0"
+            VALUE "FileDescription", "DRSystema Print" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "drsystema_print" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 DRSystema. Todos os direitos reservados." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 DRSystema. All rights reserved." "\0"
             VALUE "OriginalFilename", "drsystema_print.exe" "\0"
             VALUE "ProductName", "DRSystema Print" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
