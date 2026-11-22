@@ -128,9 +128,11 @@ O app desktop também consegue imprimir um **arquivo XML salvo na máquina** —
 O endpoint de referência é a pasta [`php_api/`](php_api/) deste repositório — **portátil**, funciona em qualquer domínio:
 
 1. Copie `php_api/` para o servidor e rode `composer install` dentro dela
-2. Teste `https://seudominio.com.br/php_api/imprimir_xml.php?ping=1` → responde `{"sucesso":true,...}`
-3. No app: **Preferências → API de conversão XML** → cole a URL → **Verificar** (✓ verde)
-4. O botão **"Imprimir arquivo XML"** só habilita com a API respondendo
+2. Teste `https://seudominio.com.br/php_api/imprimir_xml.php?key=CHAVE&ping=1` → responde `{"sucesso":true,...}`
+3. No app: **Preferências → API de conversão XML** → cole a URL com `?key=...` → **Verificar** (✓ verde)
+4. O botão **"Imprimir arquivo XML"** só habilita com a API respondendo — e re-verifica a conexão a cada tentativa
+
+A API exige uma **chave de acesso diária** (`?key=PREFIXO+DDMMAAAA`) — sem ela, ping e conversão retornam HTTP 403. Isso impede que estranhos usem seu endpoint só por conhecerem a URL.
 
 Detalhes completos em [`php_api/README.md`](php_api/README.md). A URL fica salva no app e pode ser alterada a qualquer momento — útil se o arquivo mudar de lugar no servidor ou o cliente trocar de domínio.
 
@@ -231,15 +233,20 @@ Se o nome enviado não existir no Windows, a impressão **cai automaticamente na
 
 ## 🖥️ Instalando no Windows (usuário final)
 
-**Download direto (público, sem login no GitHub):**
+**Downloads diretos (públicos, sem login no GitHub):**
 
-👉 [Baixar DRSystemaPrintSetup.exe — última versão](https://github.com/divulgueregional/imprimir_pos/releases/latest/download/DRSystemaPrintSetup.exe)
+| Arquivo | Link |
+|---|---|
+| Instalador Windows | 👉 [DRSystemaPrintSetup.exe](https://github.com/divulgueregional/imprimir_pos/releases/latest/download/DRSystemaPrintSetup.exe) |
+| API de conversão XML (servidor) | [php_api.zip](https://github.com/divulgueregional/imprimir_pos/releases/latest/download/php_api.zip) |
+| Página de teste standalone | [teste_impressao.html](https://github.com/divulgueregional/imprimir_pos/releases/latest/download/teste_impressao.html) |
 
-O link acima sempre aponta para o instalador mais recente publicado pelo GitHub Actions. Ao executar o **`DRSystemaPrintSetup.exe`**:
+Os links sempre apontam para a versão mais recente publicada pelo GitHub Actions. Ao executar o **`DRSystemaPrintSetup.exe`**:
 
 - O assistente pergunta a **pasta de instalação** (padrão: `Program Files\DRSystema Print`)
 - Cria atalho no Menu Iniciar (e opcionalmente na Área de Trabalho)
 - Oferece a opção **"Iniciar automaticamente com o Windows"** (marcada por padrão)
+- Pergunta a **API de conversão XML** (opcional — ver próxima seção)
 - Instalação por usuário — **não exige administrador**
 
 Ao final da instalação o app já inicia: **um ícone de impressora aparece na bandeja do Windows** (área de notificação, perto do relógio — pode ficar dentro da setinha `^`). O app é um serviço de segundo plano: a janela **não abre sozinha**.
@@ -248,6 +255,18 @@ Ao final da instalação o app já inicia: **um ícone de impressora aparece na 
 - **Clique direito no ícone** → menu: *Abrir*, *Imprimir Cupom de Teste*, *Encerrar Aplicativo*
 - **Fechar a janela no [X]** → esconde de volta para a bandeja; o serviço continua ativo e imprimindo
 - **Encerrar de verdade** → só pelo menu *Encerrar Aplicativo* da bandeja
+
+### 🔑 A tela "API de Conversão XML" do instalador
+
+Durante a instalação, uma página opcional pergunta qual API converterá os arquivos XML fiscais em ESC/POS:
+
+| Opção | O que acontece |
+|---|---|
+| **Usar API oficial DRSystema** | Digite a **senha do dia** (`DR` + DDMMAAAA) — a URL já vem configurada. A senha é validada pelo servidor, não pelo instalador |
+| **Minha própria API** | Digite a URL completa do `imprimir_xml.php` no seu servidor (baixe o `php_api.zip` acima, instale no seu domínio) |
+| **Configurar depois** | Pula a etapa — a URL pode ser informada a qualquer momento em *Preferências* dentro do app |
+
+Sem API configurada/verificada, o botão *"Imprimir arquivo XML"* aparece desabilitado com o motivo exibido na tela — o restante do serviço (receber impressões via HTTP/WebSocket) funciona normalmente.
 
 ---
 

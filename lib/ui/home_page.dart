@@ -59,9 +59,43 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// Texto/ícone de status da API de conversão XML.
+  String get _apiStatusText {
+    if (widget.settings.apiUrlXml.trim().isEmpty) {
+      return 'API XML: não configurada — informe a URL nas Preferências';
+    }
+    if (_checkingApi) return 'API XML: verificando...';
+    if (_apiOk == true) return 'API XML: conectada';
+    return 'API XML: indisponível ou chave inválida';
+  }
+
+  Color get _apiStatusColor {
+    if (widget.settings.apiUrlXml.trim().isEmpty || _apiOk == false) {
+      return AppTheme.errorColor;
+    }
+    if (_apiOk == true) return AppTheme.successColor;
+    return Colors.grey;
+  }
+
   /// Abre o seletor de arquivo, envia o XML para a API web e imprime
   /// o Base64 ESC/POS retornado na impressora selecionada.
   Future<void> _handlePrintXml() async {
+    // Re-verifica a API na hora — nunca abre o seletor sem conexão
+    setState(() => _checkingApi = true);
+    final ok = await widget.server.checkXmlApi();
+    if (!mounted) return;
+    setState(() {
+      _apiOk = ok;
+      _checkingApi = false;
+    });
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: AppTheme.errorColor,
+        content: Text('API de conversão indisponível — verifique a URL/chave nas Preferências'),
+      ));
+      return;
+    }
+
     final result = await FilePicker.pickFiles(
       dialogTitle: 'Selecione o XML da NFC-e / NF-e',
       type: FileType.custom,
@@ -380,6 +414,23 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 10),
 
             // Imprimir XML via API web (conversão ESC/POS no servidor)
+            Row(
+              children: [
+                Icon(
+                  _apiOk == true ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                  size: 14,
+                  color: _apiStatusColor,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _apiStatusText,
+                    style: TextStyle(fontSize: 11, color: _apiStatusColor),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
             Tooltip(
               message: _apiOk == true
                   ? 'Seleciona um XML e imprime na impressora escolhida'
@@ -392,7 +443,7 @@ class _HomePageState extends State<HomePage> {
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.upload_file_rounded, size: 18),
                   label: const Text('Imprimir arquivo XML (via API Web)'),
-                  onPressed: (_apiOk == true && !_printingXml) ? _handlePrintXml : null,
+                  onPressed: (_apiOk == true && !_printingXml && !_checkingApi) ? _handlePrintXml : null,
                 ),
               ),
             ),

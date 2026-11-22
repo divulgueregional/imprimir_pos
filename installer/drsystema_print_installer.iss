@@ -46,3 +46,95 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+{ Página customizada: configuração da API de conversão XML.
+  Grava a escolha em api_url.txt ao lado do .exe — o app importa
+  na primeira execução e apaga o arquivo. }
+var
+  ApiPage: TWizardPage;
+  RadioOficial, RadioPropria, RadioDepois: TNewRadioButton;
+  EditSenha, EditUrl: TNewEdit;
+  LblSenha, LblUrl: TNewLabel;
+
+procedure ApiRadioClick(Sender: TObject);
+begin
+  EditSenha.Enabled := RadioOficial.Checked;
+  EditUrl.Enabled := RadioPropria.Checked;
+end;
+
+procedure InitializeWizard;
+begin
+  ApiPage := CreateCustomPage(wpSelectTasks,
+    'API de Conversão XML (opcional)',
+    'Permite imprimir arquivos XML fiscais direto do aplicativo');
+
+  RadioOficial := TNewRadioButton.Create(ApiPage);
+  RadioOficial.Parent := ApiPage.Surface;
+  RadioOficial.Caption := 'Usar API oficial DRSystema (requer senha do dia)';
+  RadioOficial.Top := 0;
+  RadioOficial.Left := 0;
+  RadioOficial.Width := ApiPage.SurfaceWidth;
+  RadioOficial.OnClick := @ApiRadioClick;
+
+  LblSenha := TNewLabel.Create(ApiPage);
+  LblSenha.Parent := ApiPage.Surface;
+  LblSenha.Caption := 'Senha do dia (DR + DDMMAAAA, ex.: DR05032025):';
+  LblSenha.Top := 26;
+  LblSenha.Left := 24;
+
+  EditSenha := TNewEdit.Create(ApiPage);
+  EditSenha.Parent := ApiPage.Surface;
+  EditSenha.Top := 42;
+  EditSenha.Left := 24;
+  EditSenha.Width := 250;
+
+  RadioPropria := TNewRadioButton.Create(ApiPage);
+  RadioPropria.Parent := ApiPage.Surface;
+  RadioPropria.Caption := 'Minha própria API (URL completa do arquivo no seu servidor)';
+  RadioPropria.Top := 78;
+  RadioPropria.Left := 0;
+  RadioPropria.Width := ApiPage.SurfaceWidth;
+  RadioPropria.OnClick := @ApiRadioClick;
+
+  LblUrl := TNewLabel.Create(ApiPage);
+  LblUrl.Parent := ApiPage.Surface;
+  LblUrl.Caption := 'URL (ex.: https://seudominio.com.br/php_api/imprimir_xml.php?key=SENHA):';
+  LblUrl.Top := 104;
+  LblUrl.Left := 24;
+  LblUrl.Width := ApiPage.SurfaceWidth;
+  LblUrl.AutoSize := True;
+
+  EditUrl := TNewEdit.Create(ApiPage);
+  EditUrl.Parent := ApiPage.Surface;
+  EditUrl.Top := 120;
+  EditUrl.Left := 24;
+  EditUrl.Width := ApiPage.SurfaceWidth - 40;
+
+  RadioDepois := TNewRadioButton.Create(ApiPage);
+  RadioDepois.Parent := ApiPage.Surface;
+  RadioDepois.Caption := 'Configurar depois (no aplicativo, em Preferências)';
+  RadioDepois.Top := 158;
+  RadioDepois.Left := 0;
+  RadioDepois.Width := ApiPage.SurfaceWidth;
+  RadioDepois.Checked := True;
+  RadioDepois.OnClick := @ApiRadioClick;
+
+  ApiRadioClick(nil);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  FinalUrl: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    FinalUrl := '';
+    if RadioOficial.Checked and (Trim(EditSenha.Text) <> '') then
+      FinalUrl := 'https://drsystema.com.br/themes/drsystema/biblioteca/print/imprimir_xml.php?key=' + Trim(EditSenha.Text)
+    else if RadioPropria.Checked and (Trim(EditUrl.Text) <> '') then
+      FinalUrl := Trim(EditUrl.Text);
+    if FinalUrl <> '' then
+      SaveStringToFile(ExpandConstant('{app}\api_url.txt'), FinalUrl, False);
+  end;
+end;

@@ -11,8 +11,9 @@ class SettingsService extends ChangeNotifier {
   static const _keyApiUrlXml = 'api_url_xml';
 
   /// URL padrão do endpoint PHP que converte XML fiscal em ESC/POS.
-  static const defaultApiUrlXml =
-      'https://drsystema.com.br/themes/drsystema/biblioteca/print/imprimir_xml.php';
+  /// Vazia de propósito: cada instalação configura a própria API
+  /// (o instalador pergunta; também pode ser digitada nas Preferências).
+  static const defaultApiUrlXml = '';
 
   SharedPreferences? _prefs;
 
@@ -36,11 +37,34 @@ class SettingsService extends ChangeNotifier {
     _minimizeToTray = _prefs?.getBool(_keyMinimizeToTray) ?? true;
     _apiUrlXml = _prefs?.getString(_keyApiUrlXml) ?? defaultApiUrlXml;
 
+    // O instalador pode gravar `api_url.txt` ao lado do .exe com a URL
+    // escolhida na tela de configuração — importa uma vez e apaga.
+    await _importInstallerApiUrl();
+
     if (Platform.isWindows) {
       await _initLaunchAtStartup();
     }
 
     notifyListeners();
+  }
+
+  /// Lê `api_url.txt` gravado pelo instalador ao lado do executável,
+  /// aplica como URL da API de conversão XML e remove o arquivo.
+  Future<void> _importInstallerApiUrl() async {
+    try {
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final urlFile = File('$exeDir${Platform.pathSeparator}api_url.txt');
+      if (await urlFile.exists()) {
+        final url = (await urlFile.readAsString()).trim();
+        if (url.isNotEmpty) {
+          _apiUrlXml = url;
+          await _prefs?.setString(_keyApiUrlXml, url);
+        }
+        await urlFile.delete();
+      }
+    } catch (_) {
+      // Sem arquivo ou sem permissão — segue com o que houver nas prefs
+    }
   }
 
   Future<void> _initLaunchAtStartup() async {

@@ -9,6 +9,18 @@
 //   POST xmlfile=<arquivo>  → Base64 ESC/POS        (upload multipart)
 //   POST xml=<conteúdo>     → Base64 ESC/POS        (XML colado)
 
+// Chave de acesso diária: PREFIXO + data do dia (DDMMAAAA).
+// ⚠️ ALTERE o prefixo abaixo para um segredo seu — quem instalar o app
+// desktop digita essa senha no instalador, e a URL fica "...?key=SENHA".
+// Sem a chave correta, ping e conversão são recusados (HTTP 403).
+define('PRINT_API_PREFIX', 'MINHA');
+$apiKeyEsperada = PRINT_API_PREFIX . date('dmY');
+if (($_GET['key'] ?? '') !== $apiKeyEsperada) {
+    http_response_code(403);
+    echo 'Erro: chave de acesso inválida ou ausente';
+    exit;
+}
+
 // Ping leve: responde sem carregar nada pesado
 if (isset($_GET['ping'])) {
     header('Content-Type: application/json');

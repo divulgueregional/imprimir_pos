@@ -79,6 +79,12 @@ jobs:
           name: drsystema-print-setup
           path: installer_output\DRSystemaPrintSetup.exe
 
+      # Empacota a API PHP de conversão XML para publicar junto do Release
+      - name: Compactar php_api em ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path php_api\* -DestinationPath php_api.zip
+
       # Publica o instalador num Release "latest" contínuo — download público
       # sem login em: .../releases/latest/download/DRSystemaPrintSetup.exe
       - name: Publicar instalador no Release público
@@ -89,4 +95,7 @@ jobs:
           allowUpdates: true
           removeArtifacts: true
           replacesArtifacts: true
-          artifacts: installer_output/DRSystemaPrintSetup.exe
+          artifacts: |
+            installer_output/DRSystemaPrintSetup.exe
+            php_api.zip
+            web_client/teste_impressao.html
