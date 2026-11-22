@@ -33,7 +33,7 @@ imprimir_pos/
 │   │   └── print_request.dart         # Parser de payload (Base64 -> Bytes ESC/POS)
 │   ├── services/
 │   │   ├── windows_raw_printer.dart   # Comunicação Win32 FFI com winspool.drv (Modo RAW)
-│   │   ├── windows_window.dart        # Controle nativo da janela (FindWindow/ShowWindow/SetProp)
+│   │   ├── windows_window.dart        # Helpers Win32 (FindWindow/ShowWindow/SetProp)
 │   │   ├── local_server.dart          # Servidor HTTP/WebSocket (127.0.0.1:8182) com CORS/PNA
 │   │   ├── tray_service.dart          # Gerenciamento da Bandeja do Sistema (System Tray)
 │   │   └── settings_service.dart      # Persistência da impressora padrão e preferências
@@ -41,7 +41,8 @@ imprimir_pos/
 │       ├── home_page.dart             # Painel com dropdown de impressoras e botão de teste
 │       └── theme.dart                 # Identidade visual DRSystema (Material 3)
 ├── web_client/
-│   └── drsystema_print_client.js      # Biblioteca JS drop-in para integração no PHP
+│   ├── drsystema_print_client.js      # Biblioteca JS drop-in para integração no PHP
+│   └── teste_impressao.html           # Página standalone de teste (sem backend)
 ├── installer/
 │   └── drsystema_print_installer.iss  # Script Inno Setup para gerar DRSystemaPrintSetup.exe
 └── windows/                           # Projeto C++ nativo do Windows Runner
@@ -61,6 +62,57 @@ imprimir_pos/
    - `WritePrinter(bytes)`
    - `EndDocPrinter()` / `ClosePrinter()`
 6. A Elgin I8 imprime o cupom instantaneamente e corta o papel!
+
+---
+
+## 📦 Dependência de conteúdo: quem gera os bytes
+
+Este app **só transporta bytes prontos**. Ele não monta cupom, não lê XML e não entende layout — quem gera os comandos ESC/POS é uma biblioteca no **seu** sistema. No DRSystema, essa biblioteca é o pacote PHP [`nfephp-org/sped-pos`](https://github.com/nfephp-org/sped-pos) (classe `NFePHP\POS\DanfcePos`), que transforma o XML autorizado da NFC-e em comandos de impressora.
+
+### Instalação (no projeto PHP)
+
+```bash
+composer require nfephp-org/sped-pos
+composer require mike42/escpos-php   # exigida pelo DanfcePos (conectores)
+```
+
+### Como o PHP usa (XML → Base64)
+
+O `DanfcePos` precisa de um conector do `escpos-php`. Para capturar os bytes **sem imprimir**, usa-se o `DummyPrintConnector`, que grava tudo num buffer:
+
+```php
+use NFePHP\POS\DanfcePos;
+use Mike42\Escpos\PrintConnectors\DummyPrintConnector;
+
+$connector = new DummyPrintConnector();
+$danfcepos = new DanfcePos($connector);
+$danfcepos->loadNFCe($caminhoOuStringDoXml);  // XML da NFC-e autorizada
+$danfcepos->imprimir();
+
+$bytes = $connector->getData();   // ESC/POS puro
+echo base64_encode($bytes);       // devolve ao navegador
+```
+
+### Como o JS envia ao app (Base64 → papel)
+
+```js
+fetch('http://127.0.0.1:8182/print', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    printer: 'Elgin i8',            // nome exato no Windows (opcional)
+    data: '<base64 vindo do PHP>',
+    type: 'raw',
+    docName: 'Cupom NFC-e'
+  })
+})
+```
+
+> **Resumo da divisão:** o PHP transforma XML em bytes ESC/POS; este app transforma bytes em papel. Qualquer fonte de bytes ESC/POS em Base64 funciona — `mike42/escpos-php`, `python-escpos`, comandos montados à mão — o app não sabe nem precisa saber o que está sendo impresso.
+
+### Teste sem backend
+
+O arquivo [`web_client/teste_impressao.html`](web_client/teste_impressao.html) é uma página de homologação **standalone**: abra direto no navegador para checar a conexão, listar as impressoras do Windows e imprimir um cupom de teste ESC/POS — sem precisar de PHP nem do sistema completo.
 
 ---
 
@@ -150,6 +202,24 @@ O `drsystema_print_client.js` envia a impressora selecionada no campo `printer` 
 ### Fallback de segurança
 
 Se o nome enviado não existir no Windows, a impressão **cai automaticamente na impressora padrão** e a resposta JSON traz o campo `aviso` informando o redirecionamento — o cupom não se perde por divergência de nomes entre máquinas.
+
+---
+
+## 🖥️ Instalando no Windows (usuário final)
+
+Baixe o artifact **`drsystema-print-setup`** gerado pelo GitHub Actions e execute o **`DRSystemaPrintSetup.exe`**:
+
+- O assistente pergunta a **pasta de instalação** (padrão: `Program Files\DRSystema Print`)
+- Cria atalho no Menu Iniciar (e opcionalmente na Área de Trabalho)
+- Oferece a opção **"Iniciar automaticamente com o Windows"** (marcada por padrão)
+- Instalação por usuário — **não exige administrador**
+
+Ao final da instalação o app já inicia: **um ícone de impressora aparece na bandeja do Windows** (área de notificação, perto do relógio — pode ficar dentro da setinha `^`). O app é um serviço de segundo plano: a janela **não abre sozinha**.
+
+- **Clique no ícone** → abre a janela do app (status do servidor, impressora padrão, histórico)
+- **Clique direito no ícone** → menu: *Abrir*, *Imprimir Cupom de Teste*, *Encerrar Aplicativo*
+- **Fechar a janela no [X]** → esconde de volta para a bandeja; o serviço continua ativo e imprimindo
+- **Encerrar de verdade** → só pelo menu *Encerrar Aplicativo* da bandeja
 
 ---
 
