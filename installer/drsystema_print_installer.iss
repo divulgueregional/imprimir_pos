@@ -55,7 +55,8 @@ var
   ApiPage: TWizardPage;
   RadioOficial, RadioPropria, RadioDepois: TNewRadioButton;
   EditSenha, EditUrl: TNewEdit;
-  LblSenha, LblUrl: TNewStaticText;
+  LblSenha, LblUrl, LblAguarde: TNewStaticText;
+  ProgApi: TNewProgressBar;
 
 procedure ApiRadioClick(Sender: TObject);
 begin
@@ -120,6 +121,24 @@ begin
   RadioDepois.Checked := True;
   RadioDepois.OnClick := @ApiRadioClick;
 
+  { Indicador de "validando" — aparece enquanto a senha é checada online }
+  LblAguarde := TNewStaticText.Create(ApiPage);
+  LblAguarde.Parent := ApiPage.Surface;
+  LblAguarde.Caption := 'Aguarde — pesquisando senha na API...';
+  LblAguarde.Top := 195;
+  LblAguarde.Left := 0;
+  LblAguarde.Width := ApiPage.SurfaceWidth;
+  LblAguarde.Visible := False;
+
+  ProgApi := TNewProgressBar.Create(ApiPage);
+  ProgApi.Parent := ApiPage.Surface;
+  ProgApi.Top := 213;
+  ProgApi.Left := 0;
+  ProgApi.Width := ApiPage.SurfaceWidth;
+  ProgApi.Height := 16;
+  ProgApi.Style := npbstMarquee;
+  ProgApi.Visible := False;
+
   ApiRadioClick(nil);
 end;
 
@@ -175,8 +194,26 @@ begin
       MsgBox('Informe a senha para usar a API oficial DRSystema.', mbError, MB_OK);
       Result := False;
     end
-    else if not ValidarSenhaOnline(Senha) then
-      Result := False;
+    else
+    begin
+      { Mostra o "carregando" e trava os botões enquanto valida online }
+      LblAguarde.Visible := True;
+      ProgApi.Visible := True;
+      WizardForm.NextButton.Enabled := False;
+      WizardForm.BackButton.Enabled := False;
+      WizardForm.CancelButton.Enabled := False;
+      ApiPage.Surface.Update;
+      WizardForm.Update;
+      try
+        Result := ValidarSenhaOnline(Senha);
+      finally
+        LblAguarde.Visible := False;
+        ProgApi.Visible := False;
+        WizardForm.NextButton.Enabled := True;
+        WizardForm.BackButton.Enabled := True;
+        WizardForm.CancelButton.Enabled := True;
+      end;
+    end;
   end;
 end;
 
