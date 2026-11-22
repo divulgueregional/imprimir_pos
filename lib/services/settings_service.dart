@@ -9,6 +9,7 @@ class SettingsService extends ChangeNotifier {
   static const _keyAutostart = 'autostart';
   static const _keyMinimizeToTray = 'minimize_to_tray';
   static const _keyApiUrlXml = 'api_url_xml';
+  static const _keyApiSenhaPendente = 'api_senha_pendente';
 
   /// URL padrão do endpoint PHP que converte XML fiscal em ESC/POS.
   /// Vazia de propósito: cada instalação configura a própria API
@@ -22,12 +23,14 @@ class SettingsService extends ChangeNotifier {
   bool _autostart = true;
   bool _minimizeToTray = true;
   String _apiUrlXml = defaultApiUrlXml;
+  String? _apiSenhaPendente;
 
   String? get selectedPrinter => _selectedPrinter;
   int get port => _port;
   bool get autostart => _autostart;
   bool get minimizeToTray => _minimizeToTray;
   String get apiUrlXml => _apiUrlXml;
+  String? get apiSenhaPendente => _apiSenhaPendente;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -36,6 +39,7 @@ class SettingsService extends ChangeNotifier {
     _autostart = _prefs?.getBool(_keyAutostart) ?? true;
     _minimizeToTray = _prefs?.getBool(_keyMinimizeToTray) ?? true;
     _apiUrlXml = _prefs?.getString(_keyApiUrlXml) ?? defaultApiUrlXml;
+    _apiSenhaPendente = _prefs?.getString(_keyApiSenhaPendente);
 
     // O instalador pode gravar `api_url.txt` ao lado do .exe com a URL
     // escolhida na tela de configuração — importa uma vez e apaga.
@@ -48,23 +52,46 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Lê `api_url.txt` gravado pelo instalador ao lado do executável,
-  /// aplica como URL da API de conversão XML e remove o arquivo.
+  /// Lê `api_url.txt` gravado pelo instalador ao lado do executável e
+  /// remove o arquivo. Formatos aceitos:
+  ///   senha:DR05032025  → guarda como senha pendente (trocada por URL
+  ///                       via validador na primeira verificação)
+  ///   url:https://...   → aplica direto como URL da API
+  ///   https://...       → legado, tratado como url:
   Future<void> _importInstallerApiUrl() async {
     try {
       final exeDir = File(Platform.resolvedExecutable).parent.path;
       final urlFile = File('$exeDir${Platform.pathSeparator}api_url.txt');
       if (await urlFile.exists()) {
-        final url = (await urlFile.readAsString()).trim();
-        if (url.isNotEmpty) {
-          _apiUrlXml = url;
-          await _prefs?.setString(_keyApiUrlXml, url);
+        final content = (await urlFile.readAsString()).trim();
+        if (content.startsWith('senha:')) {
+          _apiSenhaPendente = content.substring(6).trim();
+          await _prefs?.setString(_keyApiSenhaPendente, _apiSenhaPendente!);
+        } else {
+          final url = content.startsWith('url:')
+              ? content.substring(4).trim()
+              : content;
+          if (url.isNotEmpty) {
+            _apiUrlXml = url;
+            await _prefs?.setString(_keyApiUrlXml, url);
+          }
         }
         await urlFile.delete();
       }
     } catch (_) {
       // Sem arquivo ou sem permissão — segue com o que houver nas prefs
     }
+  }
+
+  Future<void> setApiSenhaPendente(String senha) async {
+    _apiSenhaPendente = senha.trim();
+    if (_apiSenhaPendente!.isEmpty) {
+      _apiSenhaPendente = null;
+      await _prefs?.remove(_keyApiSenhaPendente);
+    } else {
+      await _prefs?.setString(_keyApiSenhaPendente, _apiSenhaPendente!);
+    }
+    notifyListeners();
   }
 
   Future<void> _initLaunchAtStartup() async {

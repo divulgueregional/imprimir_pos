@@ -55,7 +55,52 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _apiOk = ok;
         _checkingApi = false;
+        _apiUrlController.text = widget.settings.apiUrlXml;
       });
+    }
+  }
+
+  /// Pede a senha do dia (DR+DDMMAAAA) e troca pela URL oficial via
+  /// validador remoto — a URL/token nunca ficam expostos no app.
+  Future<void> _handleSenhaDialog() async {
+    final ctrl = TextEditingController();
+    final senha = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('API oficial DRSystema'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Senha do dia',
+            hintText: 'DR + data de hoje (DDMMAAAA)',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Validar')),
+        ],
+      ),
+    );
+    if (senha == null || senha.trim().isEmpty || !mounted) return;
+
+    setState(() => _checkingApi = true);
+    final erro = await widget.server.exchangeApiSenha(senha);
+    if (!mounted) return;
+    if (erro != null) {
+      setState(() => _checkingApi = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        backgroundColor: AppTheme.errorColor,
+        content: Text(erro),
+      ));
+      return;
+    }
+    await _verifyApi();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        backgroundColor: AppTheme.successColor,
+        content: Text('Senha válida — API oficial configurada!'),
+      ));
     }
   }
 
@@ -582,6 +627,18 @@ class _HomePageState extends State<HomePage> {
                   child: const Text('Verificar'),
                 ),
               ],
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                icon: const Icon(Icons.key_outlined, size: 14),
+                label: const Text('Tenho a senha do dia (API oficial)'),
+                onPressed: _checkingApi ? null : _handleSenhaDialog,
+                style: TextButton.styleFrom(
+                  textStyle: const TextStyle(fontSize: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+              ),
             ),
           ],
         ),

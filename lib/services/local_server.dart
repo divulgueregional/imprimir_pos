@@ -353,11 +353,53 @@ class LocalServer extends ChangeNotifier {
     });
   }
 
+  /// Endpoint do validador oficial: recebe a senha do dia e devolve a
+  /// URL real da API de conversão já com token embutido. Não contém
+  /// nenhum segredo — sem a senha correta, ele só responde erro.
+  static const _apiAuthUrl =
+      'https://drsystema.com.br/themes/drsystema/biblioteca/print/auth_print.php';
+
+  /// Troca a senha do dia (DR+DDMMAAAA) pela URL completa da API de
+  /// conversão, consultando o validador remoto. Retorna null em caso de
+  /// sucesso ou a mensagem de erro.
+  Future<String?> exchangeApiSenha(String senha) async {
+    try {
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+      final req = await client.postUrl(Uri.parse(_apiAuthUrl));
+      req.headers.set('Content-Type', 'application/x-www-form-urlencoded');
+      req.write('senha=${Uri.encodeComponent(senha.trim())}');
+      final resp = await req.close().timeout(const Duration(seconds: 8));
+      final body = await utf8.decoder.bind(resp).join();
+      client.close(force: true);
+
+      final json = jsonDecode(body);
+      if (json is Map && json['sucesso'] == true && json['url'] is String) {
+        await settingsService.setApiUrlXml(json['url']);
+        await settingsService.setApiSenhaPendente('');
+        return null;
+      }
+      return (json is Map && json['erro'] != null)
+          ? json['erro'].toString()
+          : 'Resposta inesperada do validador';
+    } catch (e) {
+      return 'Falha ao validar senha: $e';
+    }
+  }
+
   /// Verifica se o endpoint PHP de conversão XML (DanfcePos) está
   /// acessível — o app só oferece "Imprimir XML" se a API responder.
+  /// Se a URL ainda não existe mas há uma senha pendente (instalador),
+  /// tenta trocá-la pela URL antes de pingar.
   Future<bool> checkXmlApi() async {
-    final url = settingsService.apiUrlXml.trim();
-    if (url.isEmpty) return false;
+    var url = settingsService.apiUrlXml.trim();
+    if (url.isEmpty) {
+      final senha = settingsService.apiSenhaPendente;
+      if (senha != null && senha.isNotEmpty) {
+        await exchangeApiSenha(senha);
+        url = settingsService.apiUrlXml.trim();
+      }
+      if (url.isEmpty) return false;
+    }
     try {
       final sep = url.contains('?') ? '&' : '?';
       final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);

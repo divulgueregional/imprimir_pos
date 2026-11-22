@@ -23,17 +23,18 @@ domínio/servidor PHP.
    ```
    (requer PHP >= 8.0 com extensão `gd` habilitada — usada para gerar o
    código de barras da chave de acesso na NF-e 55)
-3. **Defina sua chave**: abra `imprimir_xml.php` e troque
-   `PRINT_API_PREFIX` por um segredo seu. A chave válida do dia é
-   `PREFIXO + DDMMAAAA` — ex.: com prefixo `ACME`, em 05/03/2025 a senha
-   é `ACME05032025`.
-4. Teste no navegador (com a chave do dia):
+3. **Defina seu token**: abra `imprimir_xml.php` e troque
+   `PRINT_API_TOKEN` por um segredo gerado por você:
+   ```bash
+   openssl rand -hex 24
    ```
-   https://seudominio.com.br/php_api/imprimir_xml.php?key=ACME05032025&ping=1
+4. Teste no navegador (com seu token):
+   ```
+   https://seudominio.com.br/php_api/imprimir_xml.php?token=SEU_TOKEN&ping=1
    ```
    Deve responder `{"sucesso":true,"api":"imprimir_xml","versao":"1.0"}`
 5. No app desktop: **Preferências → API de conversão XML** → cole a URL
-   **com a chave**: `.../imprimir_xml.php?key=ACME05032025` → **Verificar**
+   **com o token**: `.../imprimir_xml.php?token=SEU_TOKEN` → **Verificar**
    → o botão *"Imprimir arquivo XML"* habilita. O instalador também
    pergunta isso na opção "Minha própria API".
 
@@ -41,16 +42,15 @@ domínio/servidor PHP.
 
 | Chamada | Resposta |
 |---|---|
-| `GET ?key=CHAVE&ping=1` | `{"sucesso":true,...}` — verificação do app |
-| `POST ?key=CHAVE` + `xmlfile=<arquivo .xml>` | string Base64 com os bytes ESC/POS |
-| `POST ?key=CHAVE` + `xml=<conteúdo xml>` | idem |
-| Sem `key` ou chave errada | HTTP 403 + `Erro: chave de acesso inválida ou ausente` |
+| `GET ?token=SEU_TOKEN&ping=1` | `{"sucesso":true,...}` — verificação do app |
+| `POST ?token=SEU_TOKEN` + `xmlfile=<arquivo .xml>` | string Base64 com os bytes ESC/POS |
+| `POST ?token=SEU_TOKEN` + `xml=<conteúdo xml>` | idem |
+| Sem `token` ou token errado | HTTP 403 + `Erro: token de acesso inválido ou ausente` |
 | XML inválido / erro | texto começando com `Erro:` ou `IMPRESSAO_ERRO:` |
 
-> **Chave diária**: a chave muda todo dia (`PREFIXO + data`). Isso é
-> proteção casual — suficiente para impedir que estranhos usem seu
-> endpoint achando a URL por acaso. Para algo mais forte, troque a
-> verificação por um token fixo longo guardado só no servidor.
+> **Token permanente**: o token só muda se você alterar no arquivo —
+> uma URL configurada continua válida até você revogar. Se quiser
+> bloquear todos os apps de uma vez, basta trocar o token no servidor.
 
 O app envia o XML, recebe o Base64 e imprime na impressora do Windows
 selecionada. A conversão em si (layout, QR Code, itens, totais) é toda feita

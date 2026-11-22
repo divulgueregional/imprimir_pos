@@ -71,7 +71,7 @@ begin
 
   RadioOficial := TNewRadioButton.Create(ApiPage);
   RadioOficial.Parent := ApiPage.Surface;
-  RadioOficial.Caption := 'Usar API oficial DRSystema (requer senha do dia)';
+  RadioOficial.Caption := 'Usar API oficial DRSystema (senha do dia — a URL vem do servidor)';
   RadioOficial.Top := 0;
   RadioOficial.Left := 0;
   RadioOficial.Width := ApiPage.SurfaceWidth;
@@ -99,7 +99,7 @@ begin
 
   LblUrl := TNewLabel.Create(ApiPage);
   LblUrl.Parent := ApiPage.Surface;
-  LblUrl.Caption := 'URL (ex.: https://seudominio.com.br/php_api/imprimir_xml.php?key=SENHA):';
+  LblUrl.Caption := 'URL (ex.: https://seudominio.com.br/php_api/imprimir_xml.php?token=SEU_TOKEN):';
   LblUrl.Top := 104;
   LblUrl.Left := 24;
   LblUrl.Width := ApiPage.SurfaceWidth;
@@ -131,9 +131,11 @@ begin
   begin
     FinalUrl := '';
     if RadioOficial.Checked and (Trim(EditSenha.Text) <> '') then
-      FinalUrl := 'https://drsystema.com.br/themes/drsystema/biblioteca/print/imprimir_xml.php?key=' + Trim(EditSenha.Text)
+      { O app troca a senha pela URL oficial via validador remoto —
+        a URL real nunca fica gravada no instalador }
+      FinalUrl := 'senha:' + Trim(EditSenha.Text)
     else if RadioPropria.Checked and (Trim(EditUrl.Text) <> '') then
-      FinalUrl := Trim(EditUrl.Text);
+      FinalUrl := 'url:' + Trim(EditUrl.Text);
     if FinalUrl <> '' then
       SaveStringToFile(ExpandConstant('{app}\api_url.txt'), FinalUrl, False);
   end;
