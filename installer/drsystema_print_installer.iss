@@ -1,4 +1,4 @@
-; Script Inno Setup para gerar o instalador DRSystemaPrintSetup.exe
+﻿; Script Inno Setup para gerar o instalador DRSystemaPrintSetup.exe
 ; Requer Inno Setup 6 (https://jrsoftware.org/isdl.php)
 
 #define MyAppName "DRSystema Print"
@@ -55,7 +55,7 @@ var
   ApiPage: TWizardPage;
   RadioOficial, RadioPropria, RadioDepois: TNewRadioButton;
   EditSenha, EditUrl: TNewEdit;
-  LblSenha, LblUrl: TNewLabel;
+  LblSenha, LblUrl: TNewStaticText;
 
 procedure ApiRadioClick(Sender: TObject);
 begin
@@ -77,7 +77,7 @@ begin
   RadioOficial.Width := ApiPage.SurfaceWidth;
   RadioOficial.OnClick := @ApiRadioClick;
 
-  LblSenha := TNewLabel.Create(ApiPage);
+  LblSenha := TNewStaticText.Create(ApiPage);
   LblSenha.Parent := ApiPage.Surface;
   LblSenha.Caption := 'Senha do dia (DR + DDMMAAAA, ex.: DR05032025):';
   LblSenha.Top := 26;
@@ -97,7 +97,7 @@ begin
   RadioPropria.Width := ApiPage.SurfaceWidth;
   RadioPropria.OnClick := @ApiRadioClick;
 
-  LblUrl := TNewLabel.Create(ApiPage);
+  LblUrl := TNewStaticText.Create(ApiPage);
   LblUrl.Parent := ApiPage.Surface;
   LblUrl.Caption := 'URL (ex.: https://seudominio.com.br/php_api/imprimir_xml.php?token=SEU_TOKEN):';
   LblUrl.Top := 104;
