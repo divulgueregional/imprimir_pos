@@ -64,21 +64,30 @@ class _HomePageState extends State<HomePage> {
   /// validador remoto — a URL/token nunca ficam expostos no app.
   Future<void> _handleSenhaDialog() async {
     final ctrl = TextEditingController();
+    var obscure = true;
     final senha = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('API oficial DRSystema'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Senha',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          title: const Text('API oficial DRSystema'),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            obscureText: obscure,
+            decoration: InputDecoration(
+              labelText: 'Senha',
+              suffixIcon: IconButton(
+                icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18),
+                tooltip: obscure ? 'Mostrar senha' : 'Ocultar senha',
+                onPressed: () => setDlgState(() => obscure = !obscure),
+              ),
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Validar')),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Validar')),
-        ],
       ),
     );
     if (senha == null || senha.trim().isEmpty || !mounted) return;

@@ -57,10 +57,20 @@ var
   EditSenha, EditUrl: TNewEdit;
   LblSenha, LblUrl, LblAguarde: TNewStaticText;
   ProgApi: TNewProgressBar;
+  ChkVerSenha: TNewCheckBox;
+
+procedure ChkVerSenhaClick(Sender: TObject);
+begin
+  if ChkVerSenha.Checked then
+    EditSenha.PasswordChar := #0
+  else
+    EditSenha.PasswordChar := '*';
+end;
 
 procedure ApiRadioClick(Sender: TObject);
 begin
   EditSenha.Enabled := RadioOficial.Checked;
+  ChkVerSenha.Enabled := RadioOficial.Checked;
   EditUrl.Enabled := RadioPropria.Checked;
 end;
 
@@ -89,6 +99,15 @@ begin
   EditSenha.Top := 42;
   EditSenha.Left := 24;
   EditSenha.Width := 250;
+  EditSenha.PasswordChar := '*';
+
+  ChkVerSenha := TNewCheckBox.Create(ApiPage);
+  ChkVerSenha.Parent := ApiPage.Surface;
+  ChkVerSenha.Caption := 'Mostrar';
+  ChkVerSenha.Top := 44;
+  ChkVerSenha.Left := 280;
+  ChkVerSenha.Width := 80;
+  ChkVerSenha.OnClick := @ChkVerSenhaClick;
 
   RadioPropria := TNewRadioButton.Create(ApiPage);
   RadioPropria.Parent := ApiPage.Surface;
