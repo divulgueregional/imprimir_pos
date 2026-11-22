@@ -506,22 +506,37 @@ class _HomePageState extends State<HomePage> {
                           '${job.printerName} • ${job.formattedSize} • ${job.formattedTime}',
                           style: const TextStyle(fontSize: 11, color: Colors.grey),
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: isSuccess
-                                ? AppTheme.successColor.withValues(alpha: 0.1)
-                                : AppTheme.errorColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            isSuccess ? 'Sucesso' : 'Erro',
-                            style: TextStyle(
-                              color: isSuccess ? AppTheme.successColor : AppTheme.errorColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: isSuccess
+                                    ? AppTheme.successColor.withValues(alpha: 0.1)
+                                    : AppTheme.errorColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                isSuccess ? 'Sucesso' : 'Erro',
+                                style: TextStyle(
+                                  color: isSuccess ? AppTheme.successColor : AppTheme.errorColor,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.replay_rounded, size: 18),
+                              color: AppTheme.primaryColor,
+                              tooltip: 'Reimprimir nesta impressora',
+                              visualDensity: VisualDensity.compact,
+                              onPressed: job.bytes != null
+                                  ? () => widget.server.reprintJob(job)
+                                  : null,
+                            ),
+                          ],
                         ),
                       );
                     },

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:intl/intl.dart';
 
 enum PrintJobStatus { success, error, pending }
@@ -11,6 +12,9 @@ class PrintJob {
   final PrintJobStatus status;
   final String? errorMessage;
 
+  /// Bytes ESC/POS originais — permite reimprimir sem nova requisição.
+  final Uint8List? bytes;
+
   PrintJob({
     required this.id,
     required this.timestamp,
@@ -19,6 +23,7 @@ class PrintJob {
     required this.byteCount,
     required this.status,
     this.errorMessage,
+    this.bytes,
   });
 
   String get formattedTime => DateFormat('HH:mm:ss - dd/MM/yyyy').format(timestamp);

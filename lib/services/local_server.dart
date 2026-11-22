@@ -258,6 +258,7 @@ class LocalServer extends ChangeNotifier {
         docName: request.docName,
         byteCount: bytes.length,
         status: PrintJobStatus.success,
+        bytes: bytes,
       );
       _addJob(job);
 
@@ -279,6 +280,7 @@ class LocalServer extends ChangeNotifier {
         byteCount: bytes.length,
         status: PrintJobStatus.error,
         errorMessage: e.toString(),
+        bytes: bytes,
       );
       _addJob(job);
 
@@ -325,6 +327,7 @@ class LocalServer extends ChangeNotifier {
             docName: printReq.docName,
             byteCount: bytes.length,
             status: PrintJobStatus.success,
+            bytes: bytes,
           );
           _addJob(job);
 
@@ -348,6 +351,41 @@ class LocalServer extends ChangeNotifier {
         socket.add(jsonEncode({'sucesso': false, 'erro': e.toString()}));
       }
     });
+  }
+
+  /// Reenvia os bytes de um trabalho do histórico para a MESMA impressora
+  /// em que foi impresso originalmente. Registra um novo job no histórico.
+  Future<bool> reprintJob(PrintJob original) async {
+    final data = original.bytes;
+    if (data == null || data.isEmpty) return false;
+
+    final docName = '${original.docName} (reimpressão)';
+    final jobId = DateTime.now().millisecondsSinceEpoch.toString();
+    try {
+      await WindowsRawPrinter.printRawBytes(original.printerName, data, docName: docName);
+      _addJob(PrintJob(
+        id: jobId,
+        timestamp: DateTime.now(),
+        printerName: original.printerName,
+        docName: docName,
+        byteCount: data.length,
+        status: PrintJobStatus.success,
+        bytes: data,
+      ));
+      return true;
+    } catch (e) {
+      _addJob(PrintJob(
+        id: jobId,
+        timestamp: DateTime.now(),
+        printerName: original.printerName,
+        docName: docName,
+        byteCount: data.length,
+        status: PrintJobStatus.error,
+        errorMessage: e.toString(),
+        bytes: data,
+      ));
+      return false;
+    }
   }
 
   void _addJob(PrintJob job) {
