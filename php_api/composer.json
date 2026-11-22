@@ -1,0 +1,13 @@
+{
+    "name": "drsystema/print-xml-api",
+    "description": "API de conversão XML fiscal (NFC-e 65 / NF-e 55) para ESC/POS Base64 — usada pelo app desktop DRSystema Print",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "ext-gd": "*",
+        "mike42/escpos-php": "^5.0",
+        "nfephp-org/sped-pos": "*",
+        "nfephp-org/sped-nfe": "^5.0",
+        "tecnickcom/tc-lib-barcode": "^1.18 || ^2.0"
+    }
+}

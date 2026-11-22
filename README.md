@@ -45,6 +45,11 @@ imprimir_pos/
 ├── web_client/
 │   ├── drsystema_print_client.js      # Biblioteca JS drop-in para integração no PHP
 │   └── teste_impressao.html           # Página standalone de teste (sem backend)
+├── php_api/                           # API web portátil: converte XML fiscal → Base64 ESC/POS
+│   ├── imprimir_xml.php               #   Endpoint usado pelo app p/ imprimir XML local
+│   ├── DanfeSimplificadoPos.php       #   Layout NF-e 55 (DANFE simplificado POS)
+│   ├── sped_pos_patch/                #   Conector Base64 (escpos-php 4.x/5.x)
+│   └── composer.json                  #   Dependências PHP (sped-pos, escpos-php...)
 ├── installer/
 │   └── drsystema_print_installer.iss  # Script Inno Setup para gerar DRSystemaPrintSetup.exe
 └── windows/                           # Projeto C++ nativo do Windows Runner
@@ -111,6 +116,23 @@ fetch('http://127.0.0.1:8182/print', {
 ```
 
 > **Resumo da divisão:** o PHP transforma XML em bytes ESC/POS; este app transforma bytes em papel. Qualquer fonte de bytes ESC/POS em Base64 funciona — `mike42/escpos-php`, `python-escpos`, comandos montados à mão — o app não sabe nem precisa saber o que está sendo impresso.
+
+### 🗂️ Imprimir XML direto do app (sem abrir o navegador)
+
+O app desktop também consegue imprimir um **arquivo XML salvo na máquina** — a conversão para ESC/POS é feita por uma API web, e o app só transporta o resultado:
+
+```
+[App] seleciona .xml → POST para API web → Base64 de volta → imprime no Windows
+```
+
+O endpoint de referência é a pasta [`php_api/`](php_api/) deste repositório — **portátil**, funciona em qualquer domínio:
+
+1. Copie `php_api/` para o servidor e rode `composer install` dentro dela
+2. Teste `https://seudominio.com.br/php_api/imprimir_xml.php?ping=1` → responde `{"sucesso":true,...}`
+3. No app: **Preferências → API de conversão XML** → cole a URL → **Verificar** (✓ verde)
+4. O botão **"Imprimir arquivo XML"** só habilita com a API respondendo
+
+Detalhes completos em [`php_api/README.md`](php_api/README.md). A URL fica salva no app e pode ser alterada a qualquer momento — útil se o arquivo mudar de lugar no servidor ou o cliente trocar de domínio.
 
 ### Teste sem backend
 
