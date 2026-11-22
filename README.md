@@ -1,5 +1,7 @@
 # 🖨️ DRSystema Print
 
+[![Baixar Instalador](https://img.shields.io/badge/Download-DRSystemaPrintSetup.exe-1E3A8A?logo=windows)](https://github.com/divulgueregional/imprimir_pos/releases/latest/download/DRSystemaPrintSetup.exe)
+
 Aplicativo Desktop em **Flutter** para Windows que funciona como uma **ponte de impressão local** do **DRSystema**.
 
 Ele roda em segundo plano na bandeja do sistema e expõe um serviço HTTP/WebSocket em `127.0.0.1:8182`, permitindo que o sistema web (PHP + JavaScript no navegador) envie impressões térmicas de cupons fiscais (**NFC-e modelo 65**) e **NF-e (modelo 55)** diretamente para impressoras térmicas 80mm instaladas no Windows (ex: **Elgin I8**, Elgin I9, Epson TM-T20, Bematech MP-4200, Daruma) — sem abrir a janela de impressão do navegador.
@@ -207,7 +209,11 @@ Se o nome enviado não existir no Windows, a impressão **cai automaticamente na
 
 ## 🖥️ Instalando no Windows (usuário final)
 
-Baixe o artifact **`drsystema-print-setup`** gerado pelo GitHub Actions e execute o **`DRSystemaPrintSetup.exe`**:
+**Download direto (público, sem login no GitHub):**
+
+👉 [Baixar DRSystemaPrintSetup.exe — última versão](https://github.com/divulgueregional/imprimir_pos/releases/latest/download/DRSystemaPrintSetup.exe)
+
+O link acima sempre aponta para o instalador mais recente publicado pelo GitHub Actions. Ao executar o **`DRSystemaPrintSetup.exe`**:
 
 - O assistente pergunta a **pasta de instalação** (padrão: `Program Files\DRSystema Print`)
 - Cria atalho no Menu Iniciar (e opcionalmente na Área de Trabalho)
