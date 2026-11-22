@@ -60,7 +60,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Pede a senha do dia (DR+DDMMAAAA) e troca pela URL oficial via
+  /// Pede a senha fornecida pelo suporte e troca pela URL oficial via
   /// validador remoto — a URL/token nunca ficam expostos no app.
   Future<void> _handleSenhaDialog() async {
     final ctrl = TextEditingController();
@@ -72,8 +72,7 @@ class _HomePageState extends State<HomePage> {
           controller: ctrl,
           autofocus: true,
           decoration: const InputDecoration(
-            labelText: 'Senha do dia',
-            hintText: 'DR + data de hoje (DDMMAAAA)',
+            labelText: 'Senha',
           ),
         ),
         actions: [
@@ -632,7 +631,7 @@ class _HomePageState extends State<HomePage> {
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 icon: const Icon(Icons.key_outlined, size: 14),
-                label: const Text('Tenho a senha do dia (API oficial)'),
+                label: const Text('Tenho a senha (API oficial)'),
                 onPressed: _checkingApi ? null : _handleSenhaDialog,
                 style: TextButton.styleFrom(
                   textStyle: const TextStyle(fontSize: 12),

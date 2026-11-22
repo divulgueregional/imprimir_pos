@@ -71,7 +71,7 @@ begin
 
   RadioOficial := TNewRadioButton.Create(ApiPage);
   RadioOficial.Parent := ApiPage.Surface;
-  RadioOficial.Caption := 'Usar API oficial DRSystema (senha do dia — a URL vem do servidor)';
+  RadioOficial.Caption := 'Usar API oficial DRSystema (requer senha — a URL vem do servidor)';
   RadioOficial.Top := 0;
   RadioOficial.Left := 0;
   RadioOficial.Width := ApiPage.SurfaceWidth;
@@ -79,7 +79,7 @@ begin
 
   LblSenha := TNewStaticText.Create(ApiPage);
   LblSenha.Parent := ApiPage.Surface;
-  LblSenha.Caption := 'Senha do dia (DR + DDMMAAAA, ex.: DR05032025):';
+  LblSenha.Caption := 'Senha:';
   LblSenha.Top := 26;
   LblSenha.Left := 24;
 
@@ -121,6 +121,63 @@ begin
   RadioDepois.OnClick := @ApiRadioClick;
 
   ApiRadioClick(nil);
+end;
+
+{ Valida a senha digitada chamando auth_print.php via PowerShell oculto.
+  Resultados possíveis: 'OK' → segue; 'INVALID' → trava a página;
+  outro (sem internet/servidor fora) → pergunta se quer continuar. }
+function ValidarSenhaOnline(const Senha: String): Boolean;
+var
+  PsFile, OutFile, Script: String;
+  ResultOut: AnsiString;
+  ResultCode: Integer;
+begin
+  Result := False;
+  PsFile := ExpandConstant('{tmp}\check_senha.ps1');
+  OutFile := ExpandConstant('{tmp}\check_senha_out.txt');
+  Script :=
+    '$out = try { $r = Invoke-RestMethod -Uri ''https://drsystema.com.br/themes/drsystema/biblioteca/print/auth_print.php'' ' +
+    '-Method Post -Body @{ senha = ''' + Senha + ''' } -TimeoutSec 10; if ($r.sucesso) { ''OK'' } else { ''INVALID'' } } ' +
+    'catch { if ($_.Exception.Response.StatusCode.value__ -eq 403) { ''INVALID'' } else { ''ERROR'' } }' + #13#10 +
+    '$out | Out-File -FilePath ''' + OutFile + ''' -Encoding ascii';
+  SaveStringToFile(PsFile, Script, False);
+  DeleteFile(OutFile);
+  if Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + PsFile + '"',
+     '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and LoadStringFromFile(OutFile, ResultOut) then
+  begin
+    if Pos('OK', ResultOut) > 0 then
+      Result := True
+    else if Pos('INVALID', ResultOut) > 0 then
+    begin
+      MsgBox('Senha inválida. Verifique e tente novamente.', mbError, MB_OK);
+      Result := False;
+    end
+    else
+      Result := MsgBox('Não foi possível validar a senha agora (sem conexão com a internet?). '
+        + 'Deseja continuar a instalação mesmo assim?', mbConfirmation, MB_YESNO) = IDYES;
+  end
+  else
+    Result := MsgBox('Não foi possível validar a senha agora. Deseja continuar mesmo assim?',
+      mbConfirmation, MB_YESNO) = IDYES;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  Senha: String;
+begin
+  Result := True;
+  if (CurPageID = ApiPage.ID) and RadioOficial.Checked then
+  begin
+    Senha := Trim(EditSenha.Text);
+    StringChangeEx(Senha, '''', '', True);  // evita quebrar o script PS
+    if Senha = '' then
+    begin
+      MsgBox('Informe a senha para usar a API oficial DRSystema.', mbError, MB_OK);
+      Result := False;
+    end
+    else if not ValidarSenhaOnline(Senha) then
+      Result := False;
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

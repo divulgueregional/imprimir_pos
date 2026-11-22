@@ -54,7 +54,7 @@ class SettingsService extends ChangeNotifier {
 
   /// Lê `api_url.txt` gravado pelo instalador ao lado do executável e
   /// remove o arquivo. Formatos aceitos:
-  ///   senha:DR05032025  → guarda como senha pendente (trocada por URL
+  ///   senha:XXXXX       → guarda como senha pendente (trocada por URL
   ///                       via validador na primeira verificação)
   ///   url:https://...   → aplica direto como URL da API
   ///   https://...       → legado, tratado como url:

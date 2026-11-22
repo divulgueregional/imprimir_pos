@@ -132,7 +132,7 @@ O endpoint de referência é a pasta [`php_api/`](php_api/) deste repositório �
 3. No app: **Preferências → API de conversão XML** → cole a URL com `?token=...` → **Verificar** (✓ verde)
 4. O botão **"Imprimir arquivo XML"** só habilita com a API respondendo — e re-verifica a conexão a cada tentativa
 
-A API exige um **token de acesso** (`?token=...`) — sem ele, ping e conversão retornam HTTP 403. Isso impede que estranhos usem seu endpoint só por conhecerem a URL. No modo "API oficial", o token nem chega a ser visto: o app troca a senha do dia pela URL completa via validador remoto.
+A API exige um **token de acesso** (`?token=...`) — sem ele, ping e conversão retornam HTTP 403. Isso impede que estranhos usem seu endpoint só por conhecerem a URL. No modo "API oficial", o token nem chega a ser visto: o app troca a senha fornecida pelo suporte pela URL completa via validador remoto.
 
 Detalhes completos em [`php_api/README.md`](php_api/README.md). A URL fica salva no app e pode ser alterada a qualquer momento — útil se o arquivo mudar de lugar no servidor ou o cliente trocar de domínio.
 
@@ -262,7 +262,7 @@ Durante a instalação, uma página opcional pergunta qual API converterá os ar
 
 | Opção | O que acontece |
 |---|---|
-| **Usar API oficial DRSystema** | Digite a **senha do dia** (`DR` + DDMMAAAA). O app envia a senha a um validador remoto e recebe de volta a URL da API já com token — nem a URL nem o token ficam no código do app ou do instalador |
+| **Usar API oficial DRSystema** | Digite a senha fornecida pelo suporte — o instalador **valida na hora** chamando o servidor. Em seguida o app troca a senha pela URL da API já com token — nem a URL nem o token ficam no código do app ou do instalador |
 | **Minha própria API** | Digite a URL completa do `imprimir_xml.php` no seu servidor, com token (baixe o `php_api.zip` acima, instale no seu domínio) |
 | **Configurar depois** | Pula a etapa — a URL ou a senha podem ser informadas a qualquer momento em *Preferências* dentro do app |
 

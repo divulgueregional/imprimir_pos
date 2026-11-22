@@ -359,7 +359,7 @@ class LocalServer extends ChangeNotifier {
   static const _apiAuthUrl =
       'https://drsystema.com.br/themes/drsystema/biblioteca/print/auth_print.php';
 
-  /// Troca a senha do dia (DR+DDMMAAAA) pela URL completa da API de
+  /// Troca a senha fornecida pelo suporte pela URL completa da API de
   /// conversão, consultando o validador remoto. Retorna null em caso de
   /// sucesso ou a mensagem de erro.
   Future<String?> exchangeApiSenha(String senha) async {
