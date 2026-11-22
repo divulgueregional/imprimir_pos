@@ -16,7 +16,7 @@ Ele roda em segundo plano na bandeja do sistema e expõe um serviço HTTP/WebSoc
 | :--- | :--- |
 | **Tecnologia** | Nativo Windows C++ / Dart (~35MB de RAM), sem Java |
 | **Instalação** | Executável autônomo, sem pré-requisitos |
-| **Burocracia** | **Zero:** impressão silenciosa e direta, sem certificados ou assinatura de mensagens |
+| **Burocracia** | **Zero:** impressão silenciosa e direta, sem certificados ou assinatura digital |
 | **Custo** | **100% gratuito e de sua propriedade** |
 | **Identidade Visual** | **100% DRSystema** — cores, ícone e bandeja |
 | **Velocidade** | **< 50ms** — comunicação direta com o Win32 Spooler |
@@ -80,7 +80,7 @@ Este app **só transporta bytes prontos**. Ele não monta cupom, não lê XML e 
 
 ```bash
 composer require nfephp-org/sped-pos
-composer require mike42/escpos-php   # exigida pelo DanfcePos (conectores)
+composer require mike42/escpos-php   # exigida pelo DanfcePos (conector de impressão)
 ```
 
 ### Como o PHP usa (XML → Base64)
@@ -107,7 +107,7 @@ fetch('http://127.0.0.1:8182/print', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    printer: 'Elgin i8',            // nome exato no Windows (opcional)
+    printer: 'Elgin I8',            // nome exato no Windows (opcional)
     data: '<base64 vindo do PHP>',
     type: 'raw',
     docName: 'Cupom NFC-e'
@@ -182,7 +182,7 @@ Recebe o conteúdo da nota para impressão imediata.
 }
 ```
 
-*Nota:* O endpoint também aceita diretamente o formato legado em array de objetos:
+> **Nota:** O endpoint também aceita diretamente o formato legado em array de objetos:
 ```json
 [
   {
@@ -205,7 +205,7 @@ Mas **cada impressão pode sair numa impressora diferente**: basta enviar o camp
 
 ```jsonc
 // Cupom NFC-e → térmica do caixa
-POST /print   { "printer": "Elgin i8", "data": "..." }
+POST /print   { "printer": "Elgin I8", "data": "..." }
 
 // DANFE NF-e → laser do escritório
 POST /print   { "printer": "HP LaserJet", "data": "..." }
