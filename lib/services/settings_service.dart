@@ -8,6 +8,11 @@ class SettingsService extends ChangeNotifier {
   static const _keyPort = 'server_port';
   static const _keyAutostart = 'autostart';
   static const _keyMinimizeToTray = 'minimize_to_tray';
+  static const _keyApiUrlXml = 'api_url_xml';
+
+  /// URL padrão do endpoint PHP que converte XML fiscal em ESC/POS.
+  static const defaultApiUrlXml =
+      'https://drsystema.com.br/themes/drsystema/biblioteca/print/imprimir_xml.php';
 
   SharedPreferences? _prefs;
 
@@ -15,11 +20,13 @@ class SettingsService extends ChangeNotifier {
   int _port = 8182;
   bool _autostart = true;
   bool _minimizeToTray = true;
+  String _apiUrlXml = defaultApiUrlXml;
 
   String? get selectedPrinter => _selectedPrinter;
   int get port => _port;
   bool get autostart => _autostart;
   bool get minimizeToTray => _minimizeToTray;
+  String get apiUrlXml => _apiUrlXml;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -27,6 +34,7 @@ class SettingsService extends ChangeNotifier {
     _port = _prefs?.getInt(_keyPort) ?? 8182;
     _autostart = _prefs?.getBool(_keyAutostart) ?? true;
     _minimizeToTray = _prefs?.getBool(_keyMinimizeToTray) ?? true;
+    _apiUrlXml = _prefs?.getString(_keyApiUrlXml) ?? defaultApiUrlXml;
 
     if (Platform.isWindows) {
       await _initLaunchAtStartup();
@@ -92,6 +100,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> setMinimizeToTray(bool enable) async {
     _minimizeToTray = enable;
     await _prefs?.setBool(_keyMinimizeToTray, enable);
+    notifyListeners();
+  }
+
+  Future<void> setApiUrlXml(String url) async {
+    _apiUrlXml = url.trim();
+    await _prefs?.setString(_keyApiUrlXml, _apiUrlXml);
     notifyListeners();
   }
 }

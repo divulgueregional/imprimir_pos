@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import '../models/print_job.dart';
 import '../services/local_server.dart';
 import '../services/settings_service.dart';
@@ -23,19 +24,61 @@ class _HomePageState extends State<HomePage> {
   List<String> _printers = [];
   bool _loadingPrinters = false;
   bool _printingTest = false;
+  bool _printingXml = false;
+  bool _checkingApi = false;
+  bool? _apiOk;
   final TextEditingController _portController = TextEditingController();
+  final TextEditingController _apiUrlController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _portController.text = widget.settings.port.toString();
+    _apiUrlController.text = widget.settings.apiUrlXml;
     _loadPrinters();
+    _verifyApi();
   }
 
   @override
   void dispose() {
     _portController.dispose();
+    _apiUrlController.dispose();
     super.dispose();
+  }
+
+  /// Pinga a API de conversão XML — o botão "Imprimir XML" só fica
+  /// habilitado quando o endpoint responde.
+  Future<void> _verifyApi() async {
+    setState(() => _checkingApi = true);
+    final ok = await widget.server.checkXmlApi();
+    if (mounted) {
+      setState(() {
+        _apiOk = ok;
+        _checkingApi = false;
+      });
+    }
+  }
+
+  /// Abre o seletor de arquivo, envia o XML para a API web e imprime
+  /// o Base64 ESC/POS retornado na impressora selecionada.
+  Future<void> _handlePrintXml() async {
+    final result = await FilePicker.pickFiles(
+      dialogTitle: 'Selecione o XML da NFC-e / NF-e',
+      type: FileType.custom,
+      allowedExtensions: ['xml'],
+    );
+    final path = result?.files.single.path;
+    if (path == null || !mounted) return;
+
+    setState(() => _printingXml = true);
+    final erro = await widget.server.printXmlFile(path);
+    if (!mounted) return;
+    setState(() => _printingXml = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      backgroundColor: erro == null ? AppTheme.successColor : AppTheme.errorColor,
+      content: Text(erro ?? 'XML convertido via API e impresso com sucesso!'),
+    ));
   }
 
   Future<void> _loadPrinters() async {
@@ -334,6 +377,25 @@ class _HomePageState extends State<HomePage> {
                 onPressed: _printingTest ? null : _handleTestPrint,
               ),
             ),
+            const SizedBox(height: 10),
+
+            // Imprimir XML via API web (conversão ESC/POS no servidor)
+            Tooltip(
+              message: _apiOk == true
+                  ? 'Seleciona um XML e imprime na impressora escolhida'
+                  : 'API de conversão XML indisponível — configure a URL nas Preferências',
+              child: SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton.icon(
+                  icon: _printingXml
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.upload_file_rounded, size: 18),
+                  label: const Text('Imprimir arquivo XML (via API Web)'),
+                  onPressed: (_apiOk == true && !_printingXml) ? _handlePrintXml : null,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -414,6 +476,59 @@ class _HomePageState extends State<HomePage> {
                       }
                     },
                   ),
+                ),
+              ],
+            ),
+
+            const Divider(height: 16),
+
+            // URL da API de conversão XML (servidor DRSystema Web)
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text('API de conversão XML (DRSystema Web)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      Text('Endpoint que transforma XML fiscal em ESC/POS', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                if (_checkingApi)
+                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                else
+                  Icon(
+                    _apiOk == true ? Icons.check_circle : Icons.error_outline,
+                    size: 18,
+                    color: _apiOk == true ? AppTheme.successColor : AppTheme.errorColor,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _apiUrlController,
+                    style: const TextStyle(fontSize: 12),
+                    decoration: InputDecoration(
+                      hintText: 'https://.../imprimir_xml.php',
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    onSubmitted: (val) async {
+                      await widget.settings.setApiUrlXml(val);
+                      _verifyApi();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () async {
+                    await widget.settings.setApiUrlXml(_apiUrlController.text);
+                    _verifyApi();
+                  },
+                  child: const Text('Verificar'),
                 ),
               ],
             ),

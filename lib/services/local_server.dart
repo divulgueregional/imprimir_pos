@@ -353,6 +353,92 @@ class LocalServer extends ChangeNotifier {
     });
   }
 
+  /// Verifica se o endpoint PHP de conversão XML (DanfcePos) está
+  /// acessível — o app só oferece "Imprimir XML" se a API responder.
+  Future<bool> checkXmlApi() async {
+    final url = settingsService.apiUrlXml.trim();
+    if (url.isEmpty) return false;
+    try {
+      final sep = url.contains('?') ? '&' : '?';
+      final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+      final req = await client.getUrl(Uri.parse('$url${sep}ping=1'));
+      final resp = await req.close().timeout(const Duration(seconds: 4));
+      final body = await utf8.decoder.bind(resp).join();
+      client.close(force: true);
+      return body.contains('"sucesso"') && body.contains('imprimir_xml');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Envia um arquivo XML local para a API web, recebe o Base64 ESC/POS
+  /// e imprime na impressora selecionada. Retorna null em caso de sucesso
+  /// ou a mensagem de erro.
+  Future<String?> printXmlFile(String filePath) async {
+    final url = settingsService.apiUrlXml.trim();
+    if (url.isEmpty) return 'URL da API de conversão não configurada';
+    final printer = settingsService.selectedPrinter;
+    if (printer == null || printer.isEmpty) return 'Nenhuma impressora selecionada';
+
+    final fileName = filePath.split(RegExp(r'[\\/]')).last;
+    final docName = 'XML $fileName';
+    final jobId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    String base64Text;
+    try {
+      final xmlBytes = await File(filePath).readAsBytes();
+      final boundary = '----DRSystemaPrint${DateTime.now().millisecondsSinceEpoch}';
+      final client = HttpClient();
+      final req = await client.postUrl(Uri.parse(url));
+      req.headers.set('Content-Type', 'multipart/form-data; boundary=$boundary');
+      final body = <int>[
+        ...utf8.encode('--$boundary\r\nContent-Disposition: form-data; '
+            'name="xmlfile"; filename="$fileName"\r\n'
+            'Content-Type: application/xml\r\n\r\n'),
+        ...xmlBytes,
+        ...utf8.encode('\r\n--$boundary--\r\n'),
+      ];
+      req.contentLength = body.length;
+      req.add(body);
+      final resp = await req.close().timeout(const Duration(seconds: 30));
+      base64Text = (await utf8.decoder.bind(resp).join()).trim();
+      client.close(force: true);
+    } catch (e) {
+      return 'Falha ao chamar a API: $e';
+    }
+
+    if (base64Text.contains('IMPRESSAO_ERRO') || base64Text.startsWith('Erro:')) {
+      return base64Text;
+    }
+    if (base64Text.isEmpty) return 'A API retornou resposta vazia';
+
+    try {
+      final bytes = base64Decode(base64Text.replaceAll(RegExp(r'\s+'), ''));
+      await WindowsRawPrinter.printRawBytes(printer, bytes, docName: docName);
+      _addJob(PrintJob(
+        id: jobId,
+        timestamp: DateTime.now(),
+        printerName: printer,
+        docName: docName,
+        byteCount: bytes.length,
+        status: PrintJobStatus.success,
+        bytes: bytes,
+      ));
+      return null;
+    } catch (e) {
+      _addJob(PrintJob(
+        id: jobId,
+        timestamp: DateTime.now(),
+        printerName: printer,
+        docName: docName,
+        byteCount: 0,
+        status: PrintJobStatus.error,
+        errorMessage: e.toString(),
+      ));
+      return 'Falha na impressão: $e';
+    }
+  }
+
   /// Reenvia os bytes de um trabalho do histórico para a MESMA impressora
   /// em que foi impresso originalmente. Registra um novo job no histórico.
   Future<bool> reprintJob(PrintJob original) async {

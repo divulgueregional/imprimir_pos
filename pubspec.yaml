@@ -40,6 +40,7 @@ dependencies:
   launch_at_startup: ^0.5.1
   intl: ^0.20.3
   ffi: ^2.2.0
+  file_picker: ^11.0.3
 
 dev_dependencies:
   flutter_test:
