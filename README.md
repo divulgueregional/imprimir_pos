@@ -119,6 +119,40 @@ Recebe o conteúdo da nota para impressão imediata.
 
 ---
 
+## 🖨️ Imprimindo em impressoras diferentes
+
+O app tem **uma impressora padrão** — escolhida na janela do aplicativo. Toda requisição que **não informa impressora** sai nela.
+
+Mas **cada impressão pode sair numa impressora diferente**: basta enviar o campo `printer` com o nome exato da impressora instalada no Windows — o mesmo nome que o `GET /printers` retorna (inclusive impressoras de rede). O `printer` vale **por requisição** e não muda a padrão.
+
+### Na prática
+
+```jsonc
+// Cupom NFC-e → térmica do caixa
+POST /print   { "printer": "Elgin i8", "data": "..." }
+
+// DANFE NF-e → laser do escritório
+POST /print   { "printer": "HP LaserJet", "data": "..." }
+
+// Produção → impressora da cozinha (rede)
+POST /print   { "printer": "Bematech Cozinha", "data": "..." }
+
+// Sem "printer" → sai na impressora padrão
+POST /print   { "data": "..." }
+```
+
+Na mesma página é possível disparar várias impressões seguidas para impressoras diferentes — por exemplo, fechar o cupom na térmica do caixa e, logo em seguida, enviar o pedido para a impressora da cozinha.
+
+### No JavaScript
+
+O `drsystema_print_client.js` envia a impressora selecionada no campo `printer` do `POST /print`. Para direcionar uma rotina específica a outra impressora, basta enviar outro nome nesse campo na chamada — por exemplo, ler o nome de uma configuração da tela e passar direto no `fetch`.
+
+### Fallback de segurança
+
+Se o nome enviado não existir no Windows, a impressão **cai automaticamente na impressora padrão** e a resposta JSON traz o campo `aviso` informando o redirecionamento — o cupom não se perde por divergência de nomes entre máquinas.
+
+---
+
 ## 💻 Como Compilar e Gerar o Executável para Windows
 
 Em qualquer máquina Windows com o Flutter instalado:

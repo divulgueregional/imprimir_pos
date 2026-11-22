@@ -176,7 +176,7 @@ class LocalServer extends ChangeNotifier {
       defaultPrinter: settingsService.selectedPrinter,
     );
 
-    final targetPrinter = printReq.printer ?? settingsService.selectedPrinter;
+    final (targetPrinter, aviso) = await _resolvePrinter(printReq.printer);
 
     if (targetPrinter == null || targetPrinter.isEmpty) {
       final printers = await WindowsRawPrinter.getPrinters();
@@ -195,11 +195,36 @@ class LocalServer extends ChangeNotifier {
       return;
     }
 
-    await _executePrint(targetPrinter, printReq, request.response);
+    await _executePrint(targetPrinter, printReq, request.response, aviso: aviso);
+  }
+
+  /// Resolve a impressora alvo validando o nome pedido contra as instaladas.
+  /// Se o nome não existir no Windows, cai na impressora padrão (ou na
+  /// primeira instalada) e devolve um aviso do redirecionamento.
+  Future<(String?, String?)> _resolvePrinter(String? requested) async {
+    final installed = await WindowsRawPrinter.getPrinters();
+    if (installed.isEmpty) return (requested, null);
+
+    String? canon(String? name) {
+      if (name == null) return null;
+      for (final p in installed) {
+        if (p.toLowerCase() == name.toLowerCase()) return p;
+      }
+      return null;
+    }
+
+    var target = canon(requested);
+    if (target != null) return (target, null);
+
+    target = canon(settingsService.selectedPrinter) ?? installed.first;
+    final aviso = (requested != null && requested.isNotEmpty)
+        ? 'Impressora "$requested" não encontrada; impresso em "$target"'
+        : null;
+    return (target, aviso);
   }
 
   /// Executa o envio binário para a impressora
-  Future<void> _executePrint(String printerName, PrintRequest request, HttpResponse response) async {
+  Future<void> _executePrint(String printerName, PrintRequest request, HttpResponse response, {String? aviso}) async {
     final jobId = DateTime.now().millisecondsSinceEpoch.toString();
     Uint8List bytes;
 
@@ -242,6 +267,7 @@ class LocalServer extends ChangeNotifier {
         'mensagem': 'Enviado para a impressora $printerName com sucesso',
         'bytes': bytes.length,
         'impressora': printerName,
+        'aviso': ?aviso,
       }));
       await response.close();
     } catch (e) {
@@ -282,7 +308,7 @@ class LocalServer extends ChangeNotifier {
           }));
         } else if (action == 'print') {
           final printReq = PrintRequest.fromJson(parsed, defaultPrinter: settingsService.selectedPrinter);
-          final printer = printReq.printer ?? settingsService.selectedPrinter;
+          final (printer, aviso) = await _resolvePrinter(printReq.printer);
 
           if (printer == null) {
             socket.add(jsonEncode({'action': 'print', 'sucesso': false, 'erro': 'Nenhuma impressora configurada'}));
@@ -307,6 +333,7 @@ class LocalServer extends ChangeNotifier {
             'sucesso': true,
             'impressora': printer,
             'bytes': bytes.length,
+            'aviso': ?aviso,
           }));
         } else {
           socket.add(jsonEncode({
